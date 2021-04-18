@@ -1,37 +1,43 @@
 const axios = require("axios");
 const cheerio = require("cheerio");
+//firebase 
+const admin = require('firebase-admin');
+const serviceAccount = require('./service-account.json');
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+})
+const db = admin.firestore();
 var pageLimit = 20;
 let data;
-
 const fetchHackerNewsData = async () => {
-  var initialPage = 0;
+  const doc = {'data': []}
   for (i = 0; i < pageLimit; i++) {
-    var pageCount = initialPage++;
-    const url = `https://news.ycombinator.com/news?p=${pageCount}`;
+    const currentPage = {'pageData': []};
+    const url = `https://news.ycombinator.com/news?p=${i+1}`;
     await axios
       .get(url)
       .then((response) => {
         let getData = (html) => {
           data = [];
           const $ = cheerio.load(html);
+          const timeStamps = $(".age a")
           $("table.itemlist tr td:nth-child(3)").each((i, elem) => {
-            data.push({
-              title: $(elem).text(),
-              link: $(elem).find("a.storylink").attr("href"),
-              source: $(elem).find("span.sitebit.comhead").text(),
-              pageCount: pageCount,
-            });
+            currentPage['pageData'].push({
+                title: $(elem).text(),
+                link: $(elem).find("a.storylink").attr("href"),
+                source: $(elem).find("span.sitebit.comhead").text(),
+                postedAt: $(timeStamps[i]).text(),
+            })
           });
-          console.log(data);
+          doc.data.push(currentPage);
         };
+        console.log("+++++++++++Added to firebase++++++++++++")
         getData(response.data);
       })
       .catch((error) => {
         console.log(error);
       });
-    pageCount++;
-    console.log("xxxxxxx=====================================xxxxxx", url);
   }
+  db.collection("hacker-news").doc("news-data").set(doc);
 };
-
 fetchHackerNewsData();
