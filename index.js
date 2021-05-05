@@ -7,7 +7,7 @@ admin.initializeApp({
     credential: admin.credential.cert(serviceAccount)
 })
 const db = admin.firestore();
-var pageLimit = 20;
+var pageLimit = 24;
 let data;
 const fetchHackerNewsData = async () => {
   const doc = {'data': []}
@@ -38,6 +38,6 @@ const fetchHackerNewsData = async () => {
         console.log(error);
       });
   }
-  db.collection("hacker-news").doc("news-data").set(doc);
+  db.collection("hacker-news").doc("news-data").set({'data': admin.firestore.FieldValue.arrayUnion.apply(this, doc.data )}, {merge:true});
 };
 fetchHackerNewsData();
